@@ -1,0 +1,4 @@
+interface:
+  display_name: "Meterry"
+  short_description: "Build Meterry metering and billing integrations"
+  default_prompt: "Use $meterry to implement a Meterry usage metering, wallet, route, limit, and webhook integration."

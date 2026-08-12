@@ -1,0 +1,19 @@
+{
+  "name": "meterry-skills",
+  "description": "Meterry skill index",
+  "skills": [
+    {
+      "name": "meterry",
+      "display_name": "Meterry",
+      "description": "Build Meterry customer integrations for LLM API usage metering and agent SaaS billing.",
+      "url": "/skills/meterry",
+      "skill_path": "./plugins/meterry/skills/meterry/SKILL.md",
+      "install": {
+        "type": "git",
+        "repository": "https://github.com/meterry-com/skills.git",
+        "marketplacePath": ".agents/plugins/marketplace.json",
+        "plugin": "meterry"
+      }
+    }
+  ]
+}

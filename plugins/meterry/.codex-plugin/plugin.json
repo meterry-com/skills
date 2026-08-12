@@ -1,0 +1,21 @@
+{
+  "name": "meterry",
+  "version": "0.1.0+codex.local-20260812-1110",
+  "description": "Meterry skill distribution source for Codex",
+  "author": {
+    "name": "Meterry"
+  },
+  "homepage": "https://github.com/meterry/meterry-com",
+  "repository": "https://github.com/meterry/meterry-com",
+  "license": "MIT",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Meterry",
+    "shortDescription": "Build Meterry billing integrations",
+    "longDescription": "Codex skill for Meterry usage metering, rating, routes, wallets, limits, and webhooks.",
+    "developerName": "Meterry",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Use Meterry to implement billing and usage metering."
+  }
+}

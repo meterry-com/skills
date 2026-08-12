@@ -1,0 +1,20 @@
+{
+  "name": "meterry-com",
+  "interface": {
+    "displayName": "Meterry"
+  },
+  "plugins": [
+    {
+      "name": "meterry",
+      "source": {
+        "source": "local",
+        "path": "./plugins/meterry"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
