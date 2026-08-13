@@ -11,12 +11,13 @@ This repository is the distribution source for the `meterry` Codex skill.
 
 ## Installing in Codex
 
-For a local checkout, install the marketplace and then the skill:
+Install the skill with `npx skills add`:
 
 ```bash
-codex plugin marketplace add .agents/plugins/marketplace.json
-codex plugin add meterry@meterry-com
+npx skills add meterry-com/skills --skill meterry
 ```
+
+If you are working from a local checkout, point `npx skills add` at the checked-out repository instead of the public GitHub source.
 
 ## Public skill index
 
@@ -24,8 +25,6 @@ Serve `.well-known/skills/index.json` from your domain so `/skills/meterry` can 
 Meterry skill entry and its install source. That page should link to the actual skill content and
 the Git repository rather than trying to act as the skill payload itself.
 
-
-Then reinstall from the `meterry-com` marketplace.
 
 ## Repository layout
 
