@@ -9,7 +9,7 @@ This repository is the distribution source for the `meterry` Codex skill.
 - `.agents/plugins/marketplace.json` defines the marketplace entry for Codex.
 - `.well-known/skills/index.json` is the public skill index entry.
 
-## Installing in Codex
+## Install
 
 Install the skill with `npx skills add`:
 
@@ -24,7 +24,6 @@ If you are working from a local checkout, point `npx skills add` at the checked-
 Serve `.well-known/skills/index.json` from your domain so `/skills/meterry` can point to the
 Meterry skill entry and its install source. That page should link to the actual skill content and
 the Git repository rather than trying to act as the skill payload itself.
-
 
 ## Repository layout
 
