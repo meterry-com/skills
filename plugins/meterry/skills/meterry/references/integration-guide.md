@@ -36,11 +36,11 @@ Extractor rule sets contain `subject`, `dimensions`, and `charge_item_extractors
 - Use `x-billing.items` for sparse dynamic metrics known only when a request runs.
 - If `x-billing.items` reports the same metric as an extractor output, the `x-billing` item is authoritative.
 
-Minimal LLM extractor shape:
+Minimal LLM extractor creation body for `POST /v1/projects/:project_id/extractor-rule-sets`:
 
 ```json
 {
-  "id": "ers_llm_gateway_openai",
+  "name": "LLM gateway OpenAI",
   "subject": {
     "type_path": "$.meta.subject_type",
     "id_path": "$.meta.subject_id",
@@ -67,6 +67,8 @@ Minimal LLM extractor shape:
 }
 ```
 
+The create endpoint assigns the rule set ID. Use the returned `id` as `extractor_rule_set_id` when testing with `POST /rules/test`, and in the publish and single-event ingest URLs. Do not supply a custom `id` in the creation body.
+
 ## Account, Wallet, Route
 
 The account is who pays. The wallet is funds for one account and currency. A subject route maps usage producer to payer account.
@@ -89,14 +91,50 @@ Create usage-control rules with:
 
 Limit fields:
 
-- `metric_scope="amount"` sums rated charge item amounts.
-- Other metric scopes sum matching charge item metric or unit quantities.
-- `period`: `day`, `week`, `month`, `lifetime`; aliases `daily`, `weekly`, `monthly`.
-- `timezone`: calendar window timezone.
+- `measure`: `amount` for rated monetary amounts or `quantity` for usage quantities.
+- `selector_type`: `all`, `metric`, or `unit`. Set `selector_value` for `metric` or `unit` (for example `input_tokens` or `token`). `all` requires `measure="amount"`; `unit` requires `measure="quantity"`. `metric` supports either measure.
+- `currency`: required for amount limits, resolved from the limit or the rule's default currency. Amount limits count rated amounts in that currency.
+- `limit_amount`: a positive decimal string; `init_amount` is an optional nonnegative starting usage value.
+- `metric_scope`: legacy compatibility field. Prefer explicit `measure` and selector fields in new integrations rather than relying on metric-or-unit inference.
+- `period`: `hour`, `day`, `week`, `month`, `lifetime`; aliases `daily`, `weekly`, `monthly`. Custom periods include `5h`, `5 day`, `2 week`, and `5 month`.
+- `period_type`: defaults to `current`. Direct current windows anchor to rule creation or reset; Plan current windows retain the original subject-route cycle across resets. Set `calendar` explicitly for natural hour/day/week/month boundaries; calendar weeks start on Monday.
+- `timezone`: timezone for calendar boundaries. Lifetime limits have no timezone or periodic reset.
 - `action`: customer-controlled semantics such as `block`, `warn`, or `notify`.
 - `webhook_event`: optional business event name for webhook selection.
 
-Use `UsageEvent.OccurredAt` as the business-time source. Late events stay in their historical windows.
+Example body for `POST /v1/projects/:project_id/usage-control-rules`, with a calendar month amount limit and a calendar day token limit:
+
+```json
+{
+  "billing_account_id": "acct_...",
+  "subject_type": "user",
+  "subject_id": "user_123",
+  "currency": "USD",
+  "limits": [
+    {
+      "measure": "amount",
+      "selector_type": "all",
+      "period": "month",
+      "period_type": "calendar",
+      "timezone": "Asia/Singapore",
+      "limit_amount": "100",
+      "action": "block"
+    },
+    {
+      "measure": "quantity",
+      "selector_type": "metric",
+      "selector_value": "input_tokens",
+      "period": "day",
+      "period_type": "calendar",
+      "timezone": "Asia/Singapore",
+      "limit_amount": "1000000",
+      "action": "warn"
+    }
+  ]
+}
+```
+
+Use `UsageEvent.OccurredAt` as the business-time source. Late reports use their event-time windows; creation and reset counting boundaries still apply.
 
 ## Budget Lease
 
@@ -107,7 +145,21 @@ Use a Budget Lease for one agent run:
 3. Attach returned `budget_lease_id` to each event under `x-usage-control`.
 4. Stop scheduling task work when `budget_lease.exhausted` arrives.
 
-Do not create a new subject route per task.
+Create the lease with the existing route's payer and subject, an explicit currency, and a positive decimal-string budget:
+
+```json
+{
+  "run_id": "run_123",
+  "billing_account_id": "acct_...",
+  "subject_type": "user",
+  "subject_id": "user_123",
+  "currency": "USD",
+  "limit_amount": "5.00",
+  "action": "block"
+}
+```
+
+The response's `id` is the `budget_lease_id` used by ingest. `action` supports `block` (the default) or `notify`; `webhook_event` is optional. Use a new `run_id` for each new run; retry creation for the same run with the same account, subject, currency, and budget to retrieve the existing lease. Do not create a new subject route per task.
 
 ## Ingest Event Shape
 
@@ -125,7 +177,7 @@ Do not create a new subject route per task.
   },
   "x-billing": {
     "pricing_hints": {
-      "input_tokens": {"unit_price": "0.75", "pricing_unit": "1000000", "currency": "USD"}
+      "input_tokens": {"unit_price": 0.75, "pricing_unit": 1000000, "currency": "USD"}
     }
   },
   "x-usage-control": {
@@ -134,7 +186,36 @@ Do not create a new subject route per task.
 }
 ```
 
-Use batch ingest when sending multiple events, especially when each event may use a different extractor rule set.
+`x-billing.items[].quantity`, `pricing_hints.*.unit_price`, `pricing_hints.*.pricing_unit`, and `discount_hints.*.value` are JSON numbers. Wallet and limit amounts use decimal strings as shown above.
+
+Use batch ingest when sending multiple events, especially when each event may use a different extractor rule set. Send `POST /v1/projects/:project_id/events/batch-ingest` an outer `events` array; each event needs its own returned `extractor_rule_set_id` and stable `idempotency_key`:
+
+```json
+{
+  "source": "llm-gateway",
+  "events": [
+    {
+      "extractor_rule_set_id": "ers_...",
+      "external_event_id": "resp_batch_1",
+      "idempotency_key": "openai:resp_batch_1",
+      "occurred_at": 1783008000,
+      "raw_json": {
+        "provider": "openai",
+        "model": "gpt-4.1-mini",
+        "usage": {"input_tokens": 2400, "output_tokens": 520},
+        "meta": {"subject_type": "user", "subject_id": "user_123"}
+      },
+      "x-billing": {
+        "pricing_hints": {
+          "input_tokens": {"unit_price": 0.75, "pricing_unit": 1000000, "currency": "USD"}
+        }
+      }
+    }
+  ]
+}
+```
+
+Each batch event can also carry its own `x-usage-control` lease binding. Replace illustrative IDs with IDs returned by setup APIs.
 
 ## Webhook Handling
 
@@ -169,8 +250,8 @@ Wallet not debiting:
 
 Limit not advancing:
 
-- `occurred_at` is outside expected window.
-- `metric_scope` does not match amount, metric, or unit.
+- `occurred_at` is outside the expected window or before the applicable creation/reset counting boundary; check `period_type` and the window anchor.
+- `measure`, `selector_type`, or `selector_value` does not match the charge items; amount limits also require matching currency.
 - Realtime read used wrong subject, currency, or dimension scope.
 
 Webhook not acting:

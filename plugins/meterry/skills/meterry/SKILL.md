@@ -30,7 +30,7 @@ Use this skill to integrate a customer backend or agent runtime with Meterry. Me
 - Treat `Account` as the payer and `Wallet` as account-currency funds. Do not use the usage subject itself as the payer unless the customer's product model truly bills that subject directly.
 - Bind `subject_type + subject_id` to an account with a subject route before expecting realtime wallet debit or subject limits to work.
 - Use `UsageEvent.OccurredAt` semantics for customer limit windows and late reports. Do not use processing time as the business usage time.
-- Use decimal strings for money and quota values in request bodies.
+- Follow each endpoint's numeric types: use decimal strings for wallet amounts and usage-limit or Budget Lease amounts; use JSON numbers for `x-billing` quantities, price hints, and discount values.
 - Use idempotency keys for wallet credits and every ingest retry path.
 - For task budgets, create one Budget Lease per run and attach its ID through `x-usage-control.budget_lease_id`; do not create a new subject route per task.
 - For `x-billing.items`, remember that reported dynamic items override extractor-generated charge items for the same metric.
